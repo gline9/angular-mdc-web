@@ -31,6 +31,11 @@ export const MDC_SELECT_CONTROL_VALUE_ACCESSOR: Provider = {
   multi: true
 };
 
+export interface MdcSelectedData {
+  index : number;
+  value : string;
+};
+
 let nextUniqueId = 0;
 
 @Directive({
@@ -139,7 +144,7 @@ export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy
   set disabled(value: boolean) {
     this.setDisabled(value);
   }
-  @Output('change') change_ = new EventEmitter<{ index: number, value: any }>();
+  @Output('change') change_ = new EventEmitter<MdcSelectedData>();
   @HostBinding('class.mdc-select') isHostClass = true;
   @HostBinding('attr.role') role: string = 'listbox';
   @HostBinding('tabindex') tabIndex: number = 0;
@@ -183,7 +188,7 @@ export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy
       return this.renderer_.createElement('canvas').getContext('2d');
     },
     setMenuElStyle: (propertyName: string, value: string) => {
-      this.renderer_.setProperty(this.selectMenu.elementRef.nativeElement, propertyName, value);
+      this.renderer_.setStyle(this.selectMenu.elementRef.nativeElement, propertyName, value);
     },
     setMenuElAttr: (attr: string, value: string) => {
       this.renderer_.setAttribute(this.selectMenu.elementRef.nativeElement, attr, value);

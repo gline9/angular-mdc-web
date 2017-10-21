@@ -7,14 +7,12 @@ import { Component } from '@angular/core';
 export class SelectDemo {
   isDisabled: boolean = false;
   selectedValue: string;
+  closeOnScroll: boolean = true;
 
   foods = [
     { value: 'steak-0', description: 'Steak' },
     { value: 'pizza-1', description: 'Pizza' },
-    { value: 'tacos-2', description: 'Tacos' },
+    { value: 'tacos-2', description: 'Tacos is disabled', disabled: true },
     { value: 'fruit-3', description: 'Fruit' },
-    { value: 'pasta-4', description: 'Pasta' },
-    { value: 'fish-5', description: 'Fish' },
-    { value: 'meatloaf-6', description: 'Meatloaf' },
   ];
 }

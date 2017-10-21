@@ -32,8 +32,8 @@
           <td>Name of the select.</td>
         </tr>
         <tr>
-          <td>placeholder: string</td>
-          <td>Placeholder to be shown if no value has been selected.</td>
+          <td>label: string</td>
+          <td>Label text to be shown if no value has been selected.</td>
         </tr>
         <tr>
           <td>value: string</td>
@@ -42,6 +42,10 @@
         <tr>
           <td>tabIndex: number</td>
           <td>Set the underlying tab index of the select. (Default is 0)</td>
+        </tr>
+        <tr>
+          <td>closeOnScroll: boolean</td>
+          <td>Closes the menu on window scroll. (Default is true)</td>
         </tr>
       </tbody>
       <thead>
@@ -91,27 +95,81 @@
         </tr>
       </tbody>
     </table>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Directive</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>mdc-select-item</td>
+        </tr>
+      </tbody>
+      <thead>
+        <tr>
+          <th>Properties</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>value: string</td>
+          <td>Value of the select item.</td>
+        </tr>
+        <tr>
+          <td>disabled: boolean</td>
+          <td>Disable selection of the select item.</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>
-<div fxLayout="column" class="mdc-padding" fxLayoutAlign="start start" class="mdc-padding">
+<div fxLayout="column" class="mdc-padding" fxLayoutAlign="start start">
   <span mdc-typography-headline>Select Menu</span>
+  <div [mdc-theme-dark]="isDarkTheme" class="mdc-padding">
+    <mdc-select label="Favorite food" [(ngModel)]="selectedValue" name="food" [disabled]="isDisabled" [closeOnScroll]="closeOnScroll">
+      <mdc-select-item *ngFor="let food of foods" [value]="food.value" [disabled]="food.disabled">
+        {{food.description}}
+      </mdc-select-item>
+    </mdc-select>
+  </div>
   <mdc-form-field>
     <mdc-checkbox [(ngModel)]="isDisabled"></mdc-checkbox>
     <label>Disable</label>
   </mdc-form-field>
 
-  <mdc-select [placeholder]="'Favorite food'" [(ngModel)]="selectedValue" name="food" [disabled]="isDisabled">
-    <mdc-select-item *ngFor="let food of foods" [value]="food.value">
-      {{food.description}}
-    </mdc-select-item>
-  </mdc-select>
+  <mdc-form-field>
+    <mdc-checkbox [(ngModel)]="isDarkTheme"></mdc-checkbox>
+    <label>Dark Theme</label>
+  </mdc-form-field>
+  <mdc-form-field>
+    <mdc-checkbox [(ngModel)]="closeOnScroll"></mdc-checkbox>
+    <label>Close on Window Scroll</label>
+  </mdc-form-field>
+  <p mdc-typography-body1>Selected value: {{selectedValue}}</p>
 
-
-<!-- <pre style="background:#000;color:#f8f8f8"><span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select</span> [<span style="color:#89bdff">placeholder</span>]=<span style="color:#65b042">"'Favorite food'"</span> [(<span style="color:#89bdff">ngModel</span>)]=<span style="color:#65b042">"myModel"</span> <span style="color:#89bdff">name</span>=<span style="color:#65b042">"food"</span> [<span style="color:#89bdff">disabled</span>]=<span style="color:#65b042">"false"</span>></span>
-  <span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span> *<span style="color:#89bdff">ngFor</span>=<span style="color:#65b042">"let item of items"</span> [<span style="color:#89bdff">value</span>]=<span style="color:#65b042">"item.value"</span>></span>
-    {{item.description}}
+<pre style="background:#000;color:#f8f8f8"><span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select</span> <span style="color:#89bdff">label</span>=<span style="color:#65b042">"Favorite food"</span> [(<span style="color:#89bdff">ngModel</span>)]=<span style="color:#65b042">"selectedValue"</span> <span style="color:#89bdff">name</span>=<span style="color:#65b042">"food"</span>
+  [<span style="color:#89bdff">disabled</span>]=<span style="color:#65b042">"false"</span>
+  [<span style="color:#89bdff">closeOnScroll</span>]=<span style="color:#65b042">"true"</span>></span>
+  <span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span> *<span style="color:#89bdff">ngFor</span>=<span style="color:#65b042">"let food of foods"></span> [<span style="color:#89bdff">value</span>]=<span style="color:#65b042">"food.value"</span> [<span style="color:#89bdff">disabled</span>]=<span style="color:#65b042">"food.disabled"</span>></span>
+    <![CDATA[{{]]>food.description<![CDATA[}}]]>
   <span style="color:#89bdff">&lt;/<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span>></span>
 <span style="color:#89bdff">&lt;/<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select</span>></span>
 </pre>
- -->
+
+  <span mdc-typography-headline>Select Menu w/Surface</span>
+  <mdc-select label="Favorite food" name="food">
+    <mdc-select-item mdc-surface>Pizza</mdc-select-item>
+    <mdc-select-item mdc-surface>Taco</mdc-select-item>
+    <mdc-select-item mdc-surface>Fish</mdc-select-item>
+  </mdc-select>
+
+<pre style="background:#000;color:#f8f8f8"><span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select</span> [<span style="color:#89bdff">label</span>]=<span style="color:#65b042">"'Favorite food'"</span> <span style="color:#89bdff">name</span>=<span style="color:#65b042">"food"</span>></span>
+  <span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span> <span style="color:#89bdff">mdc-surface</span>></span>Pizza<span style="color:#89bdff">&lt;/<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span>></span>
+  <span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span> <span style="color:#89bdff">mdc-surface</span>></span>Taco<span style="color:#89bdff">&lt;/<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span>></span>
+  <span style="color:#89bdff">&lt;<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span> <span style="color:#89bdff">mdc-surface</span>></span>Fish<span style="color:#89bdff">&lt;/<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select-item</span>></span>
+<span style="color:#89bdff">&lt;/<span style="color:#89bdff">mdc</span><span style="color:#89bdff">-select</span>></span>
+</pre>
 </div>

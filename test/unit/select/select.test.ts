@@ -37,6 +37,25 @@ describe('MdcSelectModule', () => {
       expect(testDebugElement.nativeElement.classList).toContain('mdc-select');
     });
 
+    it('#should set disabled to true', () => {
+      testComponent.isDisabled = true;
+      fixture.detectChanges();
+      expect(testInstance.disabled).toBe(true);
+    });
+
+    it('#should generate a unique id for the select if no id is set', () => {
+      expect(testInstance.id).toMatch(/mdc-select-\d+/);
+    });
+
+    it('#should focus on underlying input element when focus() is called', () => {
+      expect(document.activeElement).not.toBe(testNativeElement);
+
+      testInstance.focus();
+      fixture.detectChanges();
+
+      expect(document.activeElement).toBe(testNativeElement);
+    });
+
     // it('#should set value to 2', () => {
     //   testInstance.setSelectedIndex(2);
     //   fixture.detectChanges();
@@ -49,16 +68,26 @@ describe('MdcSelectModule', () => {
 @Component({
   template:
   `
-  <mdc-select [placeholder]="myPlaceholder">
-    <mdc-select-item>Hamburger</mdc-select-item>
-    <mdc-select-item>Pizza</mdc-select-item>
-    <mdc-select-item>Tacos</mdc-select-item>
-  </mdc-select>
+    <mdc-select label="myPlaceholder" name="food" [disabled]="isDisabled" [closeOnScroll]="closeOnScroll">
+      <mdc-select-item *ngFor="let food of foods" [value]="food.value" [disabled]="food.disabled">
+        {{food.description}}
+      </mdc-select-item>
+    </mdc-select>
   `,
 })
 class SimpleTest {
-  myPlaceholder: string = 'Favorite food';
+  myId: string;
+  myLabel: string = 'Favorite food';
   isDisabled: boolean = true;
+  selectedValue: string;
+  closeOnScroll: boolean = false;
+
+  foods = [
+    { value: 'steak-0', description: 'Steak' },
+    { value: 'pizza-1', description: 'Pizza' },
+    { value: 'tacos-2', description: 'Tacos' },
+    { value: 'fruit-3', description: 'Fruit', disabled: true },
+  ];
 
   handleChange(event: { index: number, value: string }) {
     // this.selectedIndex = event.index;

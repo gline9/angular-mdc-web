@@ -1,12 +1,14 @@
 import {
   AfterViewInit,
   Component,
+  ContentChild,
   ContentChildren,
   Directive,
   ElementRef,
   EventEmitter,
   forwardRef,
   HostBinding,
+  HostListener,
   Input,
   OnDestroy,
   Output,
@@ -19,6 +21,7 @@ import {
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { toBoolean, isBrowser } from '../common';
 import { EventRegistry } from '../common/event-registry';
+import { Subscription } from 'rxjs';
 
 import { MDCSimpleMenu } from '@material/menu/simple';
 
@@ -32,16 +35,26 @@ export const MDC_SELECT_CONTROL_VALUE_ACCESSOR: Provider = {
 };
 
 export interface MdcSelectedData {
-  index : number;
-  value : string;
-};
+  index: number;
+  value: string;
+}
 
 let nextUniqueId = 0;
 
 @Directive({
-  selector: 'mdc-selected-item'
+  selector: 'mdc-select-label'
 })
-export class MdcSelectedItem {
+export class MdcSelectLabel {
+  @HostBinding('class.mdc-select__selected-text') isHostClass = true;
+
+  constructor(public elementRef: ElementRef) { }
+}
+
+@Component({
+  selector: 'mdc-selected-text',
+  template: '<ng-content></ng-content>'
+})
+export class MdcSelectedText {
   @HostBinding('class.mdc-select__selected-text') isHostClass = true;
 
   constructor(public elementRef: ElementRef) { }
@@ -51,30 +64,33 @@ export class MdcSelectedItem {
   selector: 'mdc-select-item'
 })
 export class MdcSelectItem {
-  private disabled_: boolean = false;
+  private _disabled: boolean = false;
 
   @Input() value: string;
-  @Input() description: string;
   @Input()
   get disabled(): boolean {
-    return this.disabled_;
+    return this._disabled;
   }
   set disabled(value: boolean) {
-    this.disabled_ = value;
+    this._disabled = value;
     if (value) {
-      this.renderer_.setAttribute(this.elementRef.nativeElement, 'aria-disabled', 'true');
+      this._renderer.setAttribute(this.elementRef.nativeElement, 'aria-disabled', 'true');
       this.tabindex = -1;
     } else {
-      this.renderer_.removeAttribute(this.elementRef.nativeElement, 'aria-disabled');
+      this._renderer.removeAttribute(this.elementRef.nativeElement, 'aria-disabled');
       this.tabindex = 0;
     }
   }
   @HostBinding('class.mdc-list-item') isHostClass = true;
   @HostBinding('attr.role') role: string = 'option';
   @HostBinding('tabindex') tabindex: number = 0;
+  @Output() select: EventEmitter<{ item: MdcSelectItem }> = new EventEmitter();
+  @HostListener('click', ['$event']) onclick(evt: Event) {
+    this.select.emit({ item: this });
+  }
 
   constructor(
-    private renderer_: Renderer2,
+    private _renderer: Renderer2,
     public elementRef: ElementRef) { }
 }
 
@@ -105,7 +121,8 @@ export class MdcSelectItems {
   },
   template:
   `
-  <mdc-selected-item>{{placeholder}}</mdc-selected-item>
+  <mdc-select-label *ngIf="!value">{{label}}</mdc-select-label>
+  <mdc-selected-text></mdc-selected-text>
   <mdc-select-menu>
     <mdc-select-items>
       <ng-content></ng-content>
@@ -118,62 +135,66 @@ export class MdcSelectItems {
   ],
 })
 export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy {
-  private open_: boolean = false;
-  private placeholder_: string = '';
-  private value_: string = '';
-  private uniqueId_: string = `mdc-select-${++nextUniqueId}`;
-  private menuFactory_: any;
-  private controlValueAccessorChangeFn_: (value: any) => void = () => { };
+  private _open: boolean = false;
+  private _label: string = '';
+  private _value: string = '';
+  private _uniqueId: string = `mdc-select-${++nextUniqueId}`;
+  private _menuFactory: any;
+  private _controlValueAccessorChangeFn: (value: any) => void = () => { };
+  private _selectItemEvents: Subscription[];
   onTouched: () => any = () => { };
 
-  @Input() id: string = this.uniqueId_;
-  get inputId(): string { return `${this.id || this.uniqueId_}-input`; }
+  @Input() id: string = this._uniqueId;
   @Input() name: string | null = null;
+  @Input() label: string = '';
   @Input()
-  get value(): string { return this.foundation_.getValue(); }
+  get value(): string { return this._foundation.getValue(); }
   set value(v: string) {
-    this.value_ = v;
-  }
-  @Input()
-  get placeholder(): string { return this.placeholder_; }
-  set placeholder(value: string) {
-    this.placeholder_ = value;
+    this._value = v;
   }
   @Input()
   get disabled(): boolean { return this.isDisabled(); }
   set disabled(value: boolean) {
     this.setDisabled(value);
   }
-  @Output('change') change_ = new EventEmitter<MdcSelectedData>();
+  @Input() closeOnScroll: boolean = true;
+  @Output() change = new EventEmitter<MdcSelectedData>();
   @HostBinding('class.mdc-select') isHostClass = true;
   @HostBinding('attr.role') role: string = 'listbox';
   @HostBinding('tabindex') tabIndex: number = 0;
-  @ViewChild(MdcSelectedItem) selectedItem: MdcSelectedItem;
-  @ContentChildren(MdcSelectItem) options: QueryList<MdcSelectItem>;
+  @ViewChild(MdcSelectedText) selectedText: MdcSelectedText;
+  @ViewChild(MdcSelectLabel) selectLabel: MdcSelectLabel;
   @ViewChild(MdcSelectMenu) selectMenu: MdcSelectMenu;
   @ViewChild(MdcSelectItems) selectItems: MdcSelectItems;
+  @ContentChildren(MdcSelectItem) options: QueryList<MdcSelectItem>;
+  @HostListener('window:scroll', ['$event'])
+  onWindowScroll(event: Event) {
+    if (this._mdcAdapter.isMenuOpen() && this.closeOnScroll) {
+      this._menuFactory.hide();
+    }
+  }
 
-  private mdcAdapter_: MDCSelectAdapter = {
+  private _mdcAdapter: MDCSelectAdapter = {
     addClass: (className: string) => {
-      this.renderer_.addClass(this.elementRef.nativeElement, className);
+      this._renderer.addClass(this.elementRef.nativeElement, className);
     },
     removeClass: (className: string) => {
-      this.renderer_.removeClass(this.elementRef.nativeElement, className);
+      this._renderer.removeClass(this.elementRef.nativeElement, className);
     },
     setAttr: (attr: string, value: string) => {
-      this.renderer_.setAttribute(this.elementRef.nativeElement, attr, value);
+      this._renderer.setAttribute(this.elementRef.nativeElement, attr, value);
     },
     rmAttr: (attr: string) => {
-      this.renderer_.removeAttribute(this.elementRef.nativeElement, attr);
+      this._renderer.removeAttribute(this.elementRef.nativeElement, attr);
     },
     computeBoundingRect: () => {
       return this.elementRef.nativeElement.getBoundingClientRect();
     },
     registerInteractionHandler: (type: string, handler: EventListener) => {
-      this.registry_.listen_(this.renderer_, type, handler, this.elementRef);
+      this._registry.listen_(this._renderer, type, handler, this.elementRef);
     },
     deregisterInteractionHandler: (type: string, handler: EventListener) => {
-      this.registry_.unlisten_(type, handler);
+      this._registry.unlisten_(type, handler);
     },
     focus: () => this.elementRef.nativeElement.focus(),
     makeTabbable: () => this.elementRef.nativeElement.tabIndex = 0,
@@ -182,67 +203,66 @@ export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy
       return isBrowser() ? window.getComputedStyle(this.elementRef.nativeElement).getPropertyValue(propertyName) : '';
     },
     setStyle: (propertyName: string, value: string) => {
-      this.renderer_.setProperty(this.elementRef.nativeElement, propertyName, value);
+      this._renderer.setProperty(this.elementRef.nativeElement, propertyName, value);
     },
     create2dRenderingContext: () => {
-      return this.renderer_.createElement('canvas').getContext('2d');
+      return this._renderer.createElement('canvas').getContext('2d');
     },
     setMenuElStyle: (propertyName: string, value: string) => {
-      this.renderer_.setStyle(this.selectMenu.elementRef.nativeElement, propertyName, value);
+      this._renderer.setStyle(this.selectMenu.elementRef.nativeElement, propertyName, value);
     },
     setMenuElAttr: (attr: string, value: string) => {
-      this.renderer_.setAttribute(this.selectMenu.elementRef.nativeElement, attr, value);
+      this._renderer.setAttribute(this.selectMenu.elementRef.nativeElement, attr, value);
     },
     rmMenuElAttr: (attr: string) => {
-      this.renderer_.removeAttribute(this.selectMenu.elementRef.nativeElement, attr);
+      this._renderer.removeAttribute(this.selectMenu.elementRef.nativeElement, attr);
     },
     getMenuElOffsetHeight: () => {
       return this.selectMenu.elementRef.nativeElement.offsetHeight;
     },
     openMenu: (focusIndex: number) => {
-      this.menuFactory_.show({ focusIndex });
+      this._menuFactory.show({ focusIndex });
     },
-    isMenuOpen: () => this.menuFactory_.open,
+    isMenuOpen: () => this._menuFactory.open,
     setSelectedTextContent: (textContent: string) => {
-      // this.selectedItem.elementRef.nativeElement.textContent = textContent;
-      this.placeholder_ = textContent;
+      this.selectedText.elementRef.nativeElement.textContent = textContent;
+      this._mdcAdapter.notifyChange();
     },
     getNumberOfOptions: () => {
       return this.options ? this.options.length : 0;
     },
     getTextForOptionAtIndex: (index: number) => {
-      return this.getItemByIndex(index).elementRef.nativeElement.textContent;
+      return this._getItemByIndex(index).elementRef.nativeElement.textContent;
     },
     getValueForOptionAtIndex: (index: number) => {
-      return this.getItemByIndex(index).value || this.getItemByIndex(index).description;
-      // return this.getItemByIndex(index).nativeElement.id || this.getItemByIndex(index).nativeElement.textContent;
+      return this._getItemByIndex(index).value || this._getItemByIndex(index).elementRef.nativeElement.textContent;
     },
     setAttrForOptionAtIndex: (index: number, attr: string, value: string) => {
-      this.renderer_.setAttribute(this.getItemByIndex(index).elementRef.nativeElement, attr, value);
+      this._renderer.setAttribute(this._getItemByIndex(index).elementRef.nativeElement, attr, value);
     },
     rmAttrForOptionAtIndex: (index: number, attr: string) => {
-      this.renderer_.removeAttribute(this.getItemByIndex(index).elementRef.nativeElement, attr);
+      this._renderer.removeAttribute(this._getItemByIndex(index).elementRef.nativeElement, attr);
     },
     getOffsetTopForOptionAtIndex: (index: number) => {
-      return this.getItemByIndex(index).elementRef.nativeElement.offsetTop;
+      return this._getItemByIndex(index).elementRef.nativeElement.offsetTop;
     },
     registerMenuInteractionHandler: (type: string, handler: EventListener) => {
-      this.registry_.listen_(this.renderer_, type, handler, this.elementRef);
+      this._registry.listen_(this._renderer, type, handler, this.elementRef);
     },
     deregisterMenuInteractionHandler: (type: string, handler: EventListener) => {
-      this.registry_.unlisten_(type, handler);
+      this._registry.unlisten_(type, handler);
     },
     notifyChange: () => {
-      this.change_.emit({
-        index: this.foundation_.getSelectedIndex(),
-        value: this.foundation_.getValue(),
+      this.change.emit({
+        index: this._foundation.getSelectedIndex(),
+        value: this._foundation.getValue(),
       });
-      this.controlValueAccessorChangeFn_(this.foundation_.getValue());
+      this._controlValueAccessorChangeFn(this._foundation.getValue());
     },
     getWindowInnerHeight: () => isBrowser() ? window.innerHeight : 0,
   };
 
-  private foundation_: {
+  private _foundation: {
     init: Function,
     destroy: Function,
     getValue: Function,
@@ -251,21 +271,24 @@ export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy
     isDisabled: Function,
     setDisabled: Function,
     resize: Function,
-  } = new MDCSelectFoundation(this.mdcAdapter_);
+  } = new MDCSelectFoundation(this._mdcAdapter);
 
   constructor(
-    private renderer_: Renderer2,
+    private _renderer: Renderer2,
     public elementRef: ElementRef,
-    private registry_: EventRegistry) { }
+    private _registry: EventRegistry) { }
 
   ngAfterViewInit() {
-    this.foundation_.init();
-    this.menuFactory_ = new MDCSimpleMenu(this.selectMenu.elementRef.nativeElement);
+    // this.options.changes.subscribe(() => {
+    // });
+    this._foundation.init();
+    this._menuFactory = new MDCSimpleMenu(this.selectMenu.elementRef.nativeElement);
     this.resize();
+    this._listenOnSelectItems();
   }
 
   ngOnDestroy() {
-    this.foundation_.destroy();
+    this._foundation.destroy();
   }
 
   writeValue(value: any) {
@@ -273,7 +296,7 @@ export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy
   }
 
   registerOnChange(fn: (value: any) => void) {
-    this.controlValueAccessorChangeFn_ = fn;
+    this._controlValueAccessorChangeFn = fn;
   }
 
   registerOnTouched(fn: any) {
@@ -281,34 +304,51 @@ export class MdcSelect implements AfterViewInit, ControlValueAccessor, OnDestroy
   }
 
   getValue(): string {
-    return this.foundation_.getValue();
+    return this._foundation.getValue();
   }
 
   getSelectedIndex(): number {
-    return this.foundation_.getSelectedIndex();
+    return this._foundation.getSelectedIndex();
   }
 
   setSelectedIndex(selectedIndex: number): void {
-    this.foundation_.setSelectedIndex(selectedIndex);
+    this._foundation.setSelectedIndex(selectedIndex);
   }
 
   isDisabled(): boolean {
-    return this.foundation_.isDisabled();
+    return this._foundation.isDisabled();
   }
 
   setDisabled(disabled: boolean): void {
-    this.foundation_.setDisabled(disabled);
+    this._foundation.setDisabled(disabled);
   }
 
   resize(): void {
-    this.foundation_.resize();
+    this._foundation.resize();
   }
 
   focus(): void {
     this.elementRef.nativeElement.focus();
   }
 
-  private getItemByIndex(index: number): MdcSelectItem | null {
+  private _listenOnSelectItems() {
+    if (this._selectItemEvents) {
+      this._unlistenSelectItems();
+    }
+    this._selectItemEvents = new Array<Subscription>();
+    this.options.forEach(_ => {
+      this._selectItemEvents.push(_.select.subscribe((event: any) => {
+        this._foundation.setSelectedIndex(this.options.toArray().indexOf(event.item));
+      }));
+    });
+  }
+
+  private _unlistenSelectItems() {
+    this._selectItemEvents.forEach(_ => _.unsubscribe());
+    this._selectItemEvents = null;
+  }
+
+  private _getItemByIndex(index: number): MdcSelectItem | null {
     return this.options.toArray()[index];
   }
 }
